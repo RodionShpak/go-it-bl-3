@@ -9,16 +9,28 @@ export class Gallery extends Component {
     page: 1,
     images: [],
     showButton: false,
+    isEmpty: false,
+    error: ''
   };
 
   hengleGetQuery = newQuery => {
-    this.setState({ query: newQuery, images: [], page: 1 });
+    
+    this.setState({ query: newQuery, images: [], page: 1 , isEmpty: false, error: ''});
   };
 
   componentDidUpdate(_, prevState) {
-    const { query, page } = this.state;
+    const { query, page} = this.state;
+    
     if (prevState.query !== query || prevState.page !== page) {
-      ImageService.getImages(query, page).then(data => this.setState(prevState => ({ images: [...prevState.images, ...data.photos], showButton: page < Math.ceil(data.total_results / 15) })));
+      ImageService.getImages(query, page).then(data => {
+        if (data.photos.length === 0) {
+          this.setState({isEmpty: true}) 
+        }
+        this.setState(prevState => ({ images: [...prevState.images, ...data.photos], showButton: page < Math.ceil(data.total_results / 15) }))
+      }).catch((error) => {
+        this.setState({ error: error.message });
+      }) 
+      
     }
   }
 
@@ -27,7 +39,7 @@ export class Gallery extends Component {
   }
 
   render() {
-    const { images, showButton } = this.state;
+    const { images, showButton, isEmpty, error } = this.state;
     const { handleClick } = this;
     return (
       <>
@@ -39,7 +51,11 @@ export class Gallery extends Component {
             </CardItem>
             </GridItem>))}
         </Grid>
-        <Text textAlign="center">Sorry. There are no images ... 😭</Text>
+        {isEmpty && <Text textAlign="center">Sorry. There are no images ... 😭</Text>}
+        {error && (
+          <Text textAlign="center">❌ Something went wrong - {error}</Text>
+        )}
+
         {showButton && <Button onClick={handleClick}>Load more</Button>}
       </>
     );
